@@ -1,0 +1,35 @@
+#!/usr/local/bin/sbcl --script
+
+(defun command-line-file ()
+  (or
+    #+SBCL (second *posix-argv*)
+    #+LISPWORKS (second system:*line-arguments-list*)
+    #+CMU (second extensions:*command-line-words*)
+    #+CLISP (first *args*)
+    nil))
+
+(defun hexdump (pname)
+  (with-open-file (infp pname)
+    (let* ((leng (file-length infp))
+	   (buffer (make-array leng)))
+      (read-sequence buffer infp)
+      (do ((i 0) (j 0) (n 0 0)) ((>= i leng))
+	(format t "~8,'0x  " i)
+	(do () ((or (>= n 16) (>= i leng)))
+	  (format t (if (= n 7) "~2,'0x  " "~2,'0x ")
+		  (char-code (aref buffer i)))
+	  (incf n) 
+	  (incf i))
+	(do () ((>= n 16))
+	  (format t "~a  " (if (= n 7) "  " #\  ));;
+	  (incf n))
+	(format t " |")
+	(do ((n 0)) ((or (>= n 16) (>= j leng)))
+	  (format t  "~c" (if (graphic-char-p (aref buffer j)) 
+			    (aref buffer j) 
+			    #\.))
+	  (incf n) 
+	  (incf j))
+	(format t "|~%")))))
+
+(hexdump (command-line-file))
